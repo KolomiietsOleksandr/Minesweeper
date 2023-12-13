@@ -11,12 +11,17 @@ private:
     bool isMine;
     bool isRevealed;
     bool isMarked;
+    bool isExploded;
 
 public:
-    Cell() : isMine(false), isRevealed(false), isMarked(false) {}
+    Cell() : isMine(false), isRevealed(false), isMarked(false), isExploded(false) {}
 
     void reveal() {
         isRevealed = true;
+    }
+
+    void explode() {
+        isExploded = true;
     }
 
     void mark() {
@@ -38,6 +43,10 @@ public:
     bool changeIsMine(bool status) {
         isMine = status;
         return isMine;
+    }
+
+    bool getIsExploded() const {
+        return isExploded;
     }
 };
 
@@ -76,6 +85,16 @@ public:
                 cout << (cells[j][i].getIsMine() ? "B" : to_string(countAdjacentBombs(j, i))) << " ";
             }
             cout << endl;
+        }
+    }
+
+    void revealAllBombs() {
+        for (size_t i = 0; i < cells.size(); ++i) {
+            for (size_t j = 0; j < cells[i].size(); ++j) {
+                if (cells[i][j].getIsMine()) {
+                    cells[i][j].reveal();
+                }
+            }
         }
     }
 
@@ -125,24 +144,29 @@ private:
     int columns;
     Grid mineGrid;
     Grid normalGrid;
+    bool gameOver;
 
 public:
-    Minesweeper(int rows, int columns) : rows(rows), columns(columns), mineGrid(rows, columns), normalGrid(rows, columns) {}
+    Minesweeper(int rows, int columns) : rows(rows), columns(columns), mineGrid(rows, columns), normalGrid(rows, columns), gameOver(false) {}
 
     void StartGame() {
-        // Initialize or reset the game state
+        gameOver = false;
     }
 
     void Click(int x, int y) {
-        // Process the click event, reveal cells, check for win/lose conditions
-        if (!normalGrid.revealCell(x, y)) {
-            // Handle invalid click
-        } else {
-            if (normalGrid.getCells()[x][y].getIsMine()) {
-                // Handle mine click (Defeat)
+        if (gameOver) {
+            return;
+        }
+
+        Cell& clickedCell = const_cast<Cell &>(normalGrid.getCells()[x][y]);
+
+        if (!clickedCell.getRevealed() && !clickedCell.getMarked()) {
+            clickedCell.reveal();
+
+            if (clickedCell.getIsMine()) {
+                clickedCell.explode();
                 Defeat();
             } else {
-                // Check for win condition (all non-mine cells revealed)
                 bool allNonMineCellsRevealed = true;
                 for (size_t i = 0; i < normalGrid.getCells().size(); ++i) {
                     for (size_t j = 0; j < normalGrid.getCells()[i].size(); ++j) {
@@ -159,6 +183,7 @@ public:
         }
     }
 
+
     void markCell(int x, int y) {
         // Mark a cell with a flag
         normalGrid.markCell(x, y);
@@ -166,15 +191,18 @@ public:
 
     void Defeat() {
         // Handle defeat condition
+        normalGrid.revealAllBombs();
+        gameOver == false;
     }
 
     void Win() {
         // Handle win condition
+        gameOver = true;
     }
 
-    bool isGameOver() {
+    bool isGameOver() const {
         // Check if the game is over (win or lose)
-        return false;
+        return gameOver;
     }
 
     const Grid& getNormalGrid() const {
@@ -183,21 +211,33 @@ public:
 };
 
 
+
 class Render {
 private:
     Texture revealedTexture;
     Texture markedTexture;
     Texture unmarkedTexture;
     Texture emptyTexture;
+    Texture bombTexture;
+    Texture bombBoomTexture;
+    vector<Texture> numberTextures;  // Текстури для чисел від 1 до 8
 
     Minesweeper game;
 
 public:
     Render(int rows, int columns, Minesweeper& game) : game(game), window(VideoMode(columns * 60, rows * 72), "Minesweeper") {
         emptyTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/0.png");
-        revealedTexture.loadFromFile("Sprites/Check.png");
+        revealedTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Check.png");
         markedTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Flag.png");
         unmarkedTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Cell.png");
+        bombTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Bomb.png");
+        bombBoomTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/BombLose.png");
+
+        // Завантаження текстур для чисел від 1 до 8
+        for (int i = 1; i <= 8; ++i) {
+            numberTextures.push_back(Texture());
+            numberTextures.back().loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/" + to_string(i) + ".png");
+        }
     }
 
     void renderWindow() {
@@ -214,20 +254,29 @@ public:
                 Sprite cellSprite;
 
                 if (cells[i][j].getRevealed()) {
-                    cellSprite.setTexture(revealedTexture);
+                    if (cells[i][j].getIsMine()) {
+                        if (cells[i][j].getIsExploded()) {
+                            cellSprite.setTexture(bombBoomTexture);
+                        } else {
+                            cellSprite.setTexture(bombTexture);
+                        }
+                    } else {
+                        int adjacentBombs = grid.countAdjacentBombs(i, j);
+                        if (adjacentBombs == 0) {
+                            cellSprite.setTexture(emptyTexture);
+                        } else {
+                            cellSprite.setTexture(numberTextures[adjacentBombs - 1]);
+                        }
+                    }
                 } else if (cells[i][j].getMarked()) {
                     cellSprite.setTexture(markedTexture);
-                }
-                else if (cells[i][j].getIsMine() == true) {
-                    cellSprite.setTexture(markedTexture);
-                }
-                else {
+                } else {
                     cellSprite.setTexture(unmarkedTexture);
                 }
 
                 cellSprite.setPosition(i * cellSize, j * cellSize + topMargin);
 
-                // Set the scale of the sprite to match the cell size
+                // Встановити масштаб спрайта для відповідності розміру клітинки
                 cellSprite.setScale(cellSize / cellSprite.getLocalBounds().width, cellSize / cellSprite.getLocalBounds().height);
 
                 window.draw(cellSprite);
