@@ -70,6 +70,15 @@ public:
         }
     }
 
+    void printGrid() const {
+        for (size_t i = 0; i < cells.size(); ++i) {
+            for (size_t j = 0; j < cells[i].size(); ++j) {
+                cout << (cells[j][i].getIsMine() ? "B" : to_string(countAdjacentBombs(j, i))) << " ";
+            }
+            cout << endl;
+        }
+    }
+
     int countAdjacentBombs(int x, int y) const {
         int count = 0;
 
@@ -85,20 +94,6 @@ public:
         }
 
         return count;
-    }
-
-    void printGrid() const {
-        for (size_t i = 0; i < cells.size(); ++i) {
-            for (size_t j = 0; j < cells[i].size(); ++j) {
-                if (cells[i][j].getIsMine()) {
-                    cout << "B ";
-                } else {
-                    int adjacentBombs = countAdjacentBombs(i, j);
-                    cout << (adjacentBombs > 0 ? to_string(adjacentBombs) : "▢") << " ";
-                }
-            }
-            cout << endl;
-        }
     }
 
     bool revealCell(int x, int y) {
@@ -140,8 +135,28 @@ public:
 
     void Click(int x, int y) {
         // Process the click event, reveal cells, check for win/lose conditions
-        normalGrid.revealCell(x, y);
-        // ...
+        if (!normalGrid.revealCell(x, y)) {
+            // Handle invalid click
+        } else {
+            if (normalGrid.getCells()[x][y].getIsMine()) {
+                // Handle mine click (Defeat)
+                Defeat();
+            } else {
+                // Check for win condition (all non-mine cells revealed)
+                bool allNonMineCellsRevealed = true;
+                for (size_t i = 0; i < normalGrid.getCells().size(); ++i) {
+                    for (size_t j = 0; j < normalGrid.getCells()[i].size(); ++j) {
+                        if (!normalGrid.getCells()[i][j].getIsMine() && !normalGrid.getCells()[i][j].getRevealed()) {
+                            allNonMineCellsRevealed = false;
+                            break;
+                        }
+                    }
+                }
+                if (allNonMineCellsRevealed) {
+                    Win();
+                }
+            }
+        }
     }
 
     void markCell(int x, int y) {
@@ -167,20 +182,25 @@ public:
     }
 };
 
+
 class Render {
 private:
     Texture revealedTexture;
     Texture markedTexture;
     Texture unmarkedTexture;
+    Texture emptyTexture;
+
+    Minesweeper game;
 
 public:
-    Render(int rows, int columns) : window(VideoMode(columns * 60, rows * 72), "Minesweeper") {
+    Render(int rows, int columns, Minesweeper& game) : game(game), window(VideoMode(columns * 60, rows * 72), "Minesweeper") {
+        emptyTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/0.png");
         revealedTexture.loadFromFile("Sprites/Check.png");
         markedTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Flag.png");
         unmarkedTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Cell.png");
     }
 
-    void renderWindow(const Minesweeper& game) {
+    void renderWindow() {
         window.clear(Color(192, 192, 192));
 
         const Grid& grid = game.getNormalGrid();
@@ -197,7 +217,11 @@ public:
                     cellSprite.setTexture(revealedTexture);
                 } else if (cells[i][j].getMarked()) {
                     cellSprite.setTexture(markedTexture);
-                } else {
+                }
+                else if (cells[i][j].getIsMine() == true) {
+                    cellSprite.setTexture(markedTexture);
+                }
+                else {
                     cellSprite.setTexture(unmarkedTexture);
                 }
 
@@ -219,6 +243,19 @@ public:
             if (event.type == Event::Closed) {
                 window.close();
             }
+            else if (event.type == Event::MouseButtonPressed) {
+                if (event.mouseButton.button == Mouse::Left) {
+                    // Отримати координати миші відносно вікна
+                    Vector2i mousePosition = Mouse::getPosition(window);
+
+                    // Перетворити координати миші на координати клітинки в сітці
+                    int x = mousePosition.x / 60; // 60 - розмір клітинки
+                    int y = (mousePosition.y - 95) / 60; // 95 - відстань від верхнього краю до сітки
+
+                    // Обробити клік мишею в грі
+                    game.Click(x, y);
+                }
+            }
         }
     }
 
@@ -237,16 +274,16 @@ int main() {
     int rows = 8;
     int columns = 8;
 
-    Render renderer(rows, columns);
     Minesweeper game(rows, columns);
+    Render renderer(rows, columns, game);
 
-    // Print the grid with bomb information
+
     cout << "Initial grid with bomb information:" << endl;
     game.getNormalGrid().printGrid();
 
     while (renderer.window.isOpen()) {
         renderer.refresh();
-        renderer.renderWindow(game);
+        renderer.renderWindow();
     }
 
     return 0;
