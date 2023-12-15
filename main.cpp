@@ -25,7 +25,7 @@ public:
     }
 
     void mark() {
-        isMarked = true;
+        isMarked = !isMarked;
     }
 
     bool getRevealed() const {
@@ -144,9 +144,9 @@ private:
     Grid mineGrid;
     Grid normalGrid;
     bool gameOver;
-
+    bool revealMode;
 public:
-    Minesweeper(int rows, int columns) : rows(rows), columns(columns), mineGrid(rows, columns), normalGrid(rows, columns), gameOver(false) {}
+    Minesweeper(int rows, int columns) : rows(rows), columns(columns), mineGrid(rows, columns), normalGrid(rows, columns), gameOver(false), revealMode(true) {}
 
     void StartGame() {
         gameOver = false;
@@ -226,9 +226,15 @@ public:
     const Grid& getNormalGrid() const {
         return normalGrid;
     }
+
+    void toggleRevealMode() {
+        revealMode = !revealMode;
+    }
+
+    bool isRevealMode() const {
+        return revealMode;
+    }
 };
-
-
 
 class Render {
 private:
@@ -350,8 +356,18 @@ public:
                     int x = mousePosition.x / 60;
                     int y = (mousePosition.y - 95) / 60;
 
-                    game.Click(x, y);
+                    if (game.isRevealMode()) {
+                        game.Click(x, y);
+                    } else {
+                        game.markCell(x, y);
+                    }
+
                     handleButtonClick();
+                }
+            } else if (event.type == Event::KeyPressed) {
+                if (event.key.code == Keyboard::F) {
+                    game.toggleRevealMode();
+                    cout << "Switched to " << (game.isRevealMode() ? "reveal" : "mark") << " mode." << endl;
                 }
             }
         }
@@ -365,7 +381,6 @@ int main() {
 
     Minesweeper game(rows, columns);
     Render renderer(rows, columns, game);
-
 
     cout << "Initial grid with bomb information:" << endl;
     game.getNormalGrid().printGrid();
