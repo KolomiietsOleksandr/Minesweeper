@@ -9,14 +9,14 @@ using namespace sf;
 class Cell {
 private:
     bool isMine;
-    bool isRevealed;
+    mutable bool isRevealed;
     bool isMarked;
     bool isExploded;
 
 public:
     Cell() : isMine(false), isRevealed(false), isMarked(false), isExploded(false) {}
 
-    void reveal() {
+    void reveal() const {
         isRevealed = true;
     }
 
@@ -64,7 +64,6 @@ public:
     void initializeGrid() {
         cells.resize(rows, vector<Cell>(columns));
 
-        // Seed the random number generator
         srand(static_cast<unsigned>(time(nullptr)));
 
         int mineCount = 10;
@@ -167,6 +166,10 @@ public:
                 clickedCell.explode();
                 Defeat();
             } else {
+                if (normalGrid.countAdjacentBombs(x, y) == 0) {
+                    revealEmptyCells(x, y);
+                }
+
                 bool allNonMineCellsRevealed = true;
                 for (size_t i = 0; i < normalGrid.getCells().size(); ++i) {
                     for (size_t j = 0; j < normalGrid.getCells()[i].size(); ++j) {
@@ -183,25 +186,38 @@ public:
         }
     }
 
+    void revealEmptyCells(int x, int y) {
+        for (int i = -1; i <= 1; ++i) {
+            for (int j = -1; j <= 1; ++j) {
+                int newX = x + i;
+                int newY = y + j;
+
+                if (newX >= 0 && newX < rows && newY >= 0 && newY < columns && !normalGrid.getCells()[newX][newY].getRevealed()) {
+                    normalGrid.getCells()[newX][newY].reveal();
+
+                    if (normalGrid.countAdjacentBombs(newX, newY) == 0) {
+                        revealEmptyCells(newX, newY);
+                    }
+                }
+            }
+        }
+    }
+
 
     void markCell(int x, int y) {
-        // Mark a cell with a flag
         normalGrid.markCell(x, y);
     }
 
     void Defeat() {
-        // Handle defeat condition
         normalGrid.revealAllBombs();
-        gameOver == false;
+        gameOver = true;
     }
 
     void Win() {
-        // Handle win condition
         gameOver = true;
     }
 
     bool isGameOver() const {
-        // Check if the game is over (win or lose)
         return gameOver;
     }
 
@@ -220,7 +236,7 @@ private:
     Texture emptyTexture;
     Texture bombTexture;
     Texture bombBoomTexture;
-    vector<Texture> numberTextures;  // Текстури для чисел від 1 до 8
+    vector<Texture> numberTextures;
 
     Minesweeper game;
 
@@ -233,7 +249,6 @@ public:
         bombTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Bomb.png");
         bombBoomTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/BombLose.png");
 
-        // Завантаження текстур для чисел від 1 до 8
         for (int i = 1; i <= 8; ++i) {
             numberTextures.push_back(Texture());
             numberTextures.back().loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/" + to_string(i) + ".png");
@@ -276,7 +291,6 @@ public:
 
                 cellSprite.setPosition(i * cellSize, j * cellSize + topMargin);
 
-                // Встановити масштаб спрайта для відповідності розміру клітинки
                 cellSprite.setScale(cellSize / cellSprite.getLocalBounds().width, cellSize / cellSprite.getLocalBounds().height);
 
                 window.draw(cellSprite);
@@ -294,14 +308,11 @@ public:
             }
             else if (event.type == Event::MouseButtonPressed) {
                 if (event.mouseButton.button == Mouse::Left) {
-                    // Отримати координати миші відносно вікна
                     Vector2i mousePosition = Mouse::getPosition(window);
 
-                    // Перетворити координати миші на координати клітинки в сітці
-                    int x = mousePosition.x / 60; // 60 - розмір клітинки
-                    int y = (mousePosition.y - 95) / 60; // 95 - відстань від верхнього краю до сітки
+                    int x = mousePosition.x / 60;
+                    int y = (mousePosition.y - 95) / 60;
 
-                    // Обробити клік мишею в грі
                     game.Click(x, y);
                 }
             }
@@ -320,8 +331,8 @@ public:
 };
 
 int main() {
-    int rows = 8;
-    int columns = 8;
+    int rows = 16;
+    int columns = 16;
 
     Minesweeper game(rows, columns);
     Render renderer(rows, columns, game);
