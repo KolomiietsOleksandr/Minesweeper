@@ -150,6 +150,8 @@ public:
 
     void StartGame() {
         gameOver = false;
+
+        normalGrid = Grid(rows, columns);
     }
 
     void Click(int x, int y) {
@@ -238,6 +240,9 @@ private:
     Texture bombBoomTexture;
     vector<Texture> numberTextures;
 
+    Texture restartButtonTexture;
+    Sprite restartButton;
+
     Minesweeper game;
 
 public:
@@ -249,11 +254,42 @@ public:
         bombTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Bomb.png");
         bombBoomTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/BombLose.png");
 
-        for (int i = 1; i <= 8; ++i) {
+        for (int i = 1; i <= 6; ++i) {
             numberTextures.push_back(Texture());
             numberTextures.back().loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/" + to_string(i) + ".png");
         }
+
+        restartButtonTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Game.png");
+        restartButton.setTexture(restartButtonTexture);
+        restartButton.setScale(60 / restartButton.getLocalBounds().width, 60 / restartButton.getLocalBounds().height);
+        restartButton.setPosition(window.getSize().x / 2.0f - restartButton.getLocalBounds().width / 0.75f,  20.0f);
     }
+
+    void handleButtonClick() {
+        if (Mouse::isButtonPressed(Mouse::Left)) {
+            Vector2i mousePosition = Mouse::getPosition(window);
+
+            if (restartButton.getGlobalBounds().contains(mousePosition.x, mousePosition.y)) {
+                game.StartGame();
+                cout << "Game restarted!" << endl;
+            }
+        }
+    }
+
+    void updateButtonTexture() {
+        if (game.isGameOver()) {
+            if (game.getNormalGrid().getColumns() > 0) {
+                restartButtonTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Lose.png");
+            } else {
+                restartButtonTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Win.png");
+            }
+        } else {
+            restartButtonTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Game.png");
+        }
+
+        restartButton.setTexture(restartButtonTexture);
+    }
+
 
     void renderWindow() {
         window.clear(Color(192, 192, 192));
@@ -297,6 +333,7 @@ public:
             }
         }
 
+        window.draw(restartButton);
         window.display();
     }
 
@@ -314,25 +351,17 @@ public:
                     int y = (mousePosition.y - 95) / 60;
 
                     game.Click(x, y);
+                    handleButtonClick();
                 }
             }
         }
     }
-
-    void WinText() {
-        cout << "Congratulations! You won!" << endl;
-    }
-
-    void LoseText() {
-        cout << "Game Over! You lost!" << endl;
-    }
-
     RenderWindow window;
 };
 
 int main() {
-    int rows = 16;
-    int columns = 16;
+    int rows = 8;
+    int columns = 8;
 
     Minesweeper game(rows, columns);
     Render renderer(rows, columns, game);
@@ -343,6 +372,7 @@ int main() {
 
     while (renderer.window.isOpen()) {
         renderer.refresh();
+        renderer.updateButtonTexture();
         renderer.renderWindow();
     }
 
