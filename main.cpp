@@ -55,8 +55,9 @@ private:
     int rows;
     int columns;
     vector<vector<Cell>> cells;
-    int mineCount = 10;
 public:
+    int mineCount = 10;
+
     Grid(int rows, int columns) : rows(rows), columns(columns) {
         initializeGrid();
     }
@@ -169,7 +170,9 @@ private:
     bool gameOver;
     bool revealMode;
 public:
-    Minesweeper(int rows, int columns) : rows(rows), columns(columns), mineGrid(rows, columns), normalGrid(rows, columns), gameOver(false), revealMode(true) {}
+    Minesweeper(int rows, int columns) : rows(rows), columns(columns), mineGrid(rows, columns), normalGrid(rows, columns), gameOver(false), revealMode(true), win(false){}
+
+    bool win = false;
 
     void StartGame() {
         gameOver = false;
@@ -204,9 +207,11 @@ public:
                         }
                     }
                 }
-                if (allNonMineCellsRevealed) {
+                if (allNonMineCellsRevealed && normalGrid.countMarkedCells() == normalGrid.mineCount) {
                     Win();
                 }
+                cout << allNonMineCellsRevealed << endl;
+                cout << normalGrid.countMarkedCells() << endl;
             }
         }
     }
@@ -228,9 +233,21 @@ public:
         }
     }
 
-
     void markCell(int x, int y) {
         normalGrid.markCell(x, y);
+
+        bool allNonMineCellsRevealed = true;
+        for (size_t i = 0; i < normalGrid.getCells().size(); ++i) {
+            for (size_t j = 0; j < normalGrid.getCells()[i].size(); ++j) {
+                if (!normalGrid.getCells()[i][j].getIsMine() && !normalGrid.getCells()[i][j].getRevealed()) {
+                    allNonMineCellsRevealed = false;
+                    break;
+                }
+            }
+        }
+        if (allNonMineCellsRevealed && normalGrid.countMarkedCells() == normalGrid.mineCount) {
+            Win();
+        }
     }
 
     void Defeat() {
@@ -240,6 +257,8 @@ public:
 
     void Win() {
         gameOver = true;
+        win = true;
+        cout << "WIN" << endl;
     }
 
     bool isGameOver() const {
@@ -307,9 +326,10 @@ public:
 
     void updateButtonTexture() {
         if (game.isGameOver()) {
-            if (game.getNormalGrid().getColumns() > 0) {
+            if (game.getNormalGrid().getColumns() > 0 && game.win == false) {
                 restartButtonTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Lose.png");
-            } else {
+            }
+            else if(game.win == true){
                 restartButtonTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Win.png");
             }
         } else {
