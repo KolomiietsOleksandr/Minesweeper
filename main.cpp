@@ -293,6 +293,52 @@ private:
 
     Minesweeper game;
 
+    vector<Texture> digitTextures;
+    Texture emptyDigitTexture;
+
+    void loadDigitTextures() {
+        for (int i = 0; i <= 9; ++i) {
+            digitTextures.push_back(Texture());
+            digitTextures.back().loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Counts/" + to_string(i) + "s.png");
+            emptyDigitTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/Counts/s.png");
+        }
+    }
+
+    void drawNumber(int number, float x, float y, float scale) {
+        string numberString;
+
+        if (number >= 0 && number < 10) {
+            numberString = "#";
+            numberString += "#";
+            numberString += to_string(number);
+        } else if (number >= 10 && number < 100) {
+            numberString = "#";
+            numberString += to_string(number);
+        } else if (number >= 100) {
+            numberString = to_string(number);
+        } else {
+            numberString = "#";
+        }
+
+        float digitWidth = 13.0f * scale;
+
+        for (size_t i = 0; i < numberString.size(); ++i) {
+            char currentChar = numberString[i];
+            Sprite digitSprite;
+
+            if (currentChar >= '0' && currentChar <= '9') {
+                int digit = currentChar - '0';
+                digitSprite.setTexture(digitTextures[digit]);
+            } else {
+                digitSprite.setTexture(emptyDigitTexture);
+            }
+
+            digitSprite.setPosition(x + i * digitWidth, y);
+            digitSprite.setScale(scale, scale);
+            window.draw(digitSprite);
+        }
+    }
+
 public:
     Render(int rows, int columns, Minesweeper& game) : game(game), window(VideoMode(columns * 60, rows * 72), "Minesweeper") {
         emptyTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/0.png");
@@ -311,6 +357,8 @@ public:
         restartButton.setTexture(restartButtonTexture);
         restartButton.setScale(60 / restartButton.getLocalBounds().width, 60 / restartButton.getLocalBounds().height);
         restartButton.setPosition(window.getSize().x / 2.0f - restartButton.getLocalBounds().width / 0.75f,  20.0f);
+
+        loadDigitTextures();
     }
 
     void handleButtonClick() {
@@ -381,6 +429,7 @@ public:
                 window.draw(cellSprite);
             }
         }
+        drawNumber(game.getNormalGrid().mineCount - game.getNormalGrid().countMarkedCells(), 10.0f, 20.0f, 2.5f);
 
         window.draw(restartButton);
         window.display();
