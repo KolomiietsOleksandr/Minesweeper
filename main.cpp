@@ -55,7 +55,7 @@ private:
     int rows;
     int columns;
     vector<vector<Cell>> cells;
-
+    int mineCount = 10;
 public:
     Grid(int rows, int columns) : rows(rows), columns(columns) {
         initializeGrid();
@@ -66,14 +66,14 @@ public:
 
         srand(static_cast<unsigned>(time(nullptr)));
 
-        int mineCount = 10;
-        while (mineCount > 0) {
+        int count = mineCount;
+        while (count > 0) {
             int x = rand() % rows;
             int y = rand() % columns;
 
             if (!cells[x][y].getIsMine()) {
                 cells[x][y].changeIsMine(true);
-                mineCount--;
+                count--;
             }
         }
     }
@@ -90,11 +90,23 @@ public:
     void revealAllBombs() {
         for (size_t i = 0; i < cells.size(); ++i) {
             for (size_t j = 0; j < cells[i].size(); ++j) {
-                if (cells[i][j].getIsMine()) {
+                if (cells[i][j].getIsMine() && cells[i][j].getMarked() == false) {
                     cells[i][j].reveal();
                 }
             }
         }
+    }
+
+    int countMarkedCells() const {
+        int count = 0;
+        for (size_t i = 0; i < cells.size(); ++i) {
+            for (size_t j = 0; j < cells[i].size(); ++j) {
+                if (cells[i][j].getMarked()) {
+                    ++count;
+                }
+            }
+        }
+        return count;
     }
 
     int countAdjacentBombs(int x, int y) const {
@@ -123,6 +135,17 @@ public:
     }
 
     void markCell(int x, int y) {
+        if (x >= 0 && x < rows && y >= 0 && y < columns) {
+            if (!cells[x][y].getMarked() && countMarkedCells() < mineCount) {
+                cells[x][y].mark();
+            }
+            else if (cells[x][y].getMarked() && countMarkedCells() > 0){
+                cells[x][y].mark();
+            }
+        }
+    }
+
+    void unmarkCell(int x, int y) {
         if (x >= 0 && x < rows && y >= 0 && y < columns) {
             cells[x][y].mark();
         }
