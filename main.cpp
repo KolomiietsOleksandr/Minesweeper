@@ -112,7 +112,6 @@ public:
 
     int countAdjacentBombs(int x, int y) const {
         int count = 0;
-
         for (int i = -1; i <= 1; ++i) {
             for (int j = -1; j <= 1; ++j) {
                 int newX = x + i;
@@ -123,7 +122,6 @@ public:
                 }
             }
         }
-
         return count;
     }
 
@@ -258,7 +256,6 @@ public:
     void Win() {
         gameOver = true;
         win = true;
-        cout << "WIN" << endl;
     }
 
     bool isGameOver() const {
@@ -295,6 +292,10 @@ private:
 
     vector<Texture> digitTextures;
     Texture emptyDigitTexture;
+
+    Texture ModeTextureReveal;
+    Texture ModeTextureMark;
+    Sprite ModeSprite;
 
     void loadDigitTextures() {
         for (int i = 0; i <= 9; ++i) {
@@ -339,6 +340,25 @@ private:
         }
     }
 
+    void loadRevealModeTextures() {
+        ModeTextureReveal.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/R.png");
+        ModeTextureMark.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/M.png");
+    }
+
+    void drawRevealMode() {
+        if (game.isRevealMode()) {
+            ModeSprite.setTexture(ModeTextureReveal);
+        } else {
+            ModeSprite.setTexture(ModeTextureMark);
+        }
+
+        ModeSprite.setPosition(115, 20);
+        ModeSprite.setScale(2.5f, 2.5f);
+
+        window.draw(ModeSprite);
+    }
+
+
 public:
     Render(int rows, int columns, Minesweeper& game) : game(game), window(VideoMode(columns * 60, rows * 72), "Minesweeper") {
         emptyTexture.loadFromFile("/Users/zakerden1234/Desktop/Minesweeper/Sprites/0.png");
@@ -359,6 +379,7 @@ public:
         restartButton.setPosition(window.getSize().x / 2.0f - restartButton.getLocalBounds().width / 0.75f,  20.0f);
 
         loadDigitTextures();
+        loadRevealModeTextures();
     }
 
     void handleButtonClick() {
@@ -367,7 +388,6 @@ public:
 
             if (restartButton.getGlobalBounds().contains(mousePosition.x, mousePosition.y)) {
                 game.StartGame();
-                cout << "Game restarted!" << endl;
             }
         }
     }
@@ -423,13 +443,14 @@ public:
                 }
 
                 cellSprite.setPosition(i * cellSize, j * cellSize + topMargin);
-
                 cellSprite.setScale(cellSize / cellSprite.getLocalBounds().width, cellSize / cellSprite.getLocalBounds().height);
 
                 window.draw(cellSprite);
             }
         }
+
         drawNumber(game.getNormalGrid().mineCount - game.getNormalGrid().countMarkedCells(), 10.0f, 20.0f, 2.5f);
+        drawRevealMode();
 
         window.draw(restartButton);
         window.display();
@@ -453,13 +474,11 @@ public:
                     } else {
                         game.markCell(x, y);
                     }
-
                     handleButtonClick();
                 }
-            } else if (event.type == Event::KeyPressed) {
+            } else if (event.type == Event::KeyPressed && !game.isGameOver()) {
                 if (event.key.code == Keyboard::F) {
                     game.toggleRevealMode();
-                    cout << "Switched to " << (game.isRevealMode() ? "reveal" : "mark") << " mode." << endl;
                 }
             }
         }
